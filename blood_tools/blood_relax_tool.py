@@ -5,6 +5,7 @@ Created on Tue May 24 13:09:08 2016
 
 @author: Josh Bradshaw - joshbradshaw11@gmail.com
 """
+from __future__ import absolute_import, print_function
 
 # std lib imports
 import qtpy
@@ -12,7 +13,7 @@ import os
 import traceback
 import types
 from functools import wraps
-import cPickle
+import pickle
 import math
 # anaconda module imports
 from PyQt4 import QtGui, QtCore
@@ -21,9 +22,9 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
 # other python files that should be in the same dir
-import ROI
+from . import ROI
 import blood_tools
-import fitting
+from . import fitting
 
 def QTSlotExceptionRationalizer(*args):
     """
@@ -44,7 +45,7 @@ def QTSlotExceptionRationalizer(*args):
             try:
                 return func(*args)
             except:
-                print "Uncaught Exception in slot"
+                print("Uncaught Exception in slot")
                 traceback.print_exc()
         return wrapper
 
@@ -290,7 +291,7 @@ class MainWindow(QtGui.QWidget):
             out = QtGui.QFileDialog.getSaveFileName(caption='ROI filename')
         self.roi_path=out
         f=open(self.roi_path, 'w')
-        cPickle.dump(to_save, f)
+        pickle.dump(to_save, f)
         f.close()
 
     @QTSlotExceptionRationalizer("bool")
@@ -435,7 +436,7 @@ class MainWindow(QtGui.QWidget):
         to_save['ROIs'] = self.image_ROIs
         to_save['included_slices'] = self.included_slices
         with open(self.roi_path, 'w') as f:
-            cPickle.dump(to_save, f)
+            pickle.dump(to_save, f)
             f.close()
 
     @QTSlotExceptionRationalizer("bool")
@@ -455,7 +456,7 @@ class MainWindow(QtGui.QWidget):
         else:
             infilename = QtGui.QFileDialog.getOpenFileName(caption='ROI filename')
         f=open(infilename,'r')
-        to_load = cPickle.load(f)
+        to_load = pickle.load(f)
         f.close()
         self.image_ROIs = to_load['ROIs']
         self.included_slices = to_load['included_slices']

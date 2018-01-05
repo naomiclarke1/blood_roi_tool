@@ -3,7 +3,7 @@
 This example shows how to use matplotlib to create regions of interest.  
 Original code by Daniel Kornhauser, modified by M Durant.
 """
-from __future__ import division
+from __future__ import division, print_function
 
 import pylab as plt
 from skimage.draw import polygon, circle, ellipse

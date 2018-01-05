@@ -28,6 +28,7 @@ Example
 >>> clabel(CS)
 """
 
+from __future__ import print_function
 try:
     import numexpr
 except:
@@ -261,7 +262,7 @@ class model:
                 {'alt_func':alt_func})   
             for _ in ['low','high']: 
                 p1,ch1,ch = alt_model.fit([0], [chi0 + sigma])
-                print alt_func(p1[0].value)
+                print(alt_func(p1[0].value))
                 alt_model['p'].value = p0 + (p0-p1[0].value)
                 out_in.append(alt_model['p'].value)           
             out[par.name] = sorted(out_in)
@@ -293,7 +294,7 @@ class model:
         results = empty((N,self.npars),dtype=float)
         #pars = [p for p in self.pars if not(p.frozen)]
         parameters = [p.value for p in self.pars]
-        for n in xrange(N):
+        for n in range(N):
             #ind = random.randint(x.size,size=x.size)
             ind = random.randint(max(x.shape),size=max(x.shape))
             if dy.size>1:
@@ -301,12 +302,12 @@ class model:
             else:
                 out,ch,ch = self.fit(x[0,ind],y[ind],dy)
             results[n] = [o.value for o in out if not(o.frozen)]
-            print self.pars    
+            print(self.pars)
         for jj, pa in enumerate(self.pars):
                 pa.value=parameters[jj]  
         self.fit(x,y,dy) #reset to best-fit
         return {self.pars[i].name:results[:,i] for i in range(len(self.pars)) if
-                    not(self.pars[i].frozen)}
+                    not self.pars[i].frozen}
 
     def monte(self,N=10000,ftest=False,**data):
         """Similar technique to bootstrap: random realisations of the data, but
@@ -326,7 +327,7 @@ class model:
             p,chi = self.fit(x,y,dy)
             dy = dy*sqrt(chi/(x.size - self.npars))
         results = empty((N,self.npars),dtype=float)
-        for n in xrange(N):
+        for n in range(N):
             y2 = random.randn(x.size)*dy + y
             out,ch = self.fit(x,y2,dy)
             results[n] = [o.value for o in out if not(o.frozen)]

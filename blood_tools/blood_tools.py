@@ -5,10 +5,11 @@ Created on Mon Jun  8 14:35:19 2015
 @author: sportnoy
 Sharon's Tools for blood data analysis
 """
+from __future__ import print_function, absolute_import
 import numpy as np
-import cPickle
+import pickle
 import os
-import fitting
+from . import fitting
 import pylab as plt
 import dicom
 import sys
@@ -53,7 +54,7 @@ def load_ROIs(filename):
     roi_list=[]
     while True:
         try:
-            roi_list.append(cPickle.load(f))
+            roi_list.append(pickle.load(f))
         except EOFError:
             break
     f.close()
@@ -72,7 +73,7 @@ def read_dicoms(foldername, attributes=[]):
             dicom_obj=dicom.read_file(os.path.join(foldername, file_name))
             dicom_list.append(dicom_obj)
         except dicom.filereader.InvalidDicomError:
-            print "Error, invalid dicom file: {}".format(os.path.join(foldername, file_name))
+            print("Error, invalid dicom file: {}".format(os.path.join(foldername, file_name)))
             continue            
             
         image_list.append(dicom_obj.pixel_array)
@@ -104,7 +105,7 @@ def img_roi_signal(folders_to_process,attributes=[]):
             rois=load_ROIs(roifile)   
         except IOError:
             error_string=str(folder) + ' does not have an ROI file.'                
-            print error_string
+            print(error_string)
             sys.exit(1)
         roi_list.append(rois)
         max_images=np.max([max_images,len(image_list)])
@@ -132,11 +133,11 @@ def SE_fit_new(te, signal, mean_noise=0, noise_floor='n', noise_factor=2):
             stop_index=temp[0]
         else:
             stop_index=len(signal)
-        print stop_index
+        print(stop_index)
         
         if stop_index<2:
             #print 'T2 is too short, need to fit for noise floor'
-            print 'T2 too short, data point needs to be excluded'
+            print('T2 too short, data point needs to be excluded')
             spin_echo=fitting.model('M0*exp(-x/T2)+a',{'M0':signal.max(),'T2':-1,'a':signal.min()}) 
             #spin_echo.fitpars['method']='leastsq'             
             #spin_echo.fit(te,signal)      
@@ -144,7 +145,7 @@ def SE_fit_new(te, signal, mean_noise=0, noise_floor='n', noise_factor=2):
             spin_echo.fit(te[0:stop_index],signal[0:stop_index],serr_signal[0:stop_index])         
           
     else:   #noise floor=='y'
-        print 'explicitly fitting for noise floor'
+        print('explicitly fitting for noise floor')
         spin_echo=fitting.model('M0*exp(-x/T2)+a',{'M0':signal.max(),'T2':100,'a':signal.min()}) 
 #        spin_echo['a']=mean_noise
 #        spin_echo['a'].freeze()        
@@ -178,7 +179,7 @@ def T2_cpmg_process(folder_to_process,plot='y'):
             
             spin_echo_fits.append(spin_echo_fit)
         except RuntimeError: 
-            print 'RuntimeError'
+            print('RuntimeError')
             spin_echo=fitting.model('M0*exp(-x/T2)+a',{'M0':0,'T2':0,'a':0}) 
             spin_echo_fits.append(spin_echo)
     return spin_echo_fits   
@@ -189,7 +190,7 @@ def read_bga(filename):
     data=[]
     while True:
         try:
-            data.append(cPickle.load(f))
+            data.append(pickle.load(f))
         except EOFError:
             break
     f.close()
@@ -218,7 +219,7 @@ def IR_fit(ti,signal,serr_signal=[]):
         inversion_recovery['T1']=T1_guess                                
     inversion_recovery.fit(np.array(ti),signal,serr_signal)  
     chi2=inversion_recovery.chi2()
-    print chi2
+    print(chi2)
     return inversion_recovery
     
 def IR_process(folders_to_process):
@@ -232,7 +233,7 @@ def IR_process(folders_to_process):
     plt.figure()
     rois=load_ROIs(folders_to_process[0]+'/rois')
     for kk,roi in enumerate(rois[0:-2]):
-        print kk
+        print(kk)
         plt.subplot(4,4,kk+1)
         #chi2, chi_surf, M0, T1, T1_err, aa = IR_fit(TIs, mean_signal_mat[:,kk,0], serr_signal_mat[:,kk,0],'n')
         fit = IR_fit(TIs, mean_signal_mat[:,kk,0])
@@ -252,7 +253,7 @@ def T2_cpmg_bootstrap(folder,N=1000,plot='y'):
         rois=load_ROIs(roifile)   
     except IOError:
         error_string=str(folder) + ' does not have an ROI file.'                
-        print error_string
+        print(error_string)
         sys.exit(1)
     image_list,TEs=read_dicoms(folder,['EchoTime'])
     tes=np.array([entry['EchoTime'] for entry in TEs])
@@ -262,7 +263,7 @@ def T2_cpmg_bootstrap(folder,N=1000,plot='y'):
     if plot=='y':
         plt.figure()
     for kk,roi in enumerate(rois[0:-2]):
-        print kk
+        print(kk)
         npix=len(roi.get_indices()[0])
         pixels=roi.get_indices()
         sig=[img[pixels].mean() for img in image_list]
@@ -283,7 +284,7 @@ def T2_cpmg_bootstrap(folder,N=1000,plot='y'):
                 spin_echo_fit = SE_fit_new( tes, np.array(sig), mean_noise, 'n' )
                 T2bs.append(spin_echo_fit['T2'].value) 
             except RuntimeError: 
-                print 'RuntimeError'
+                print('RuntimeError')
                 T2bs.append(np.nan)
         T2_errs.append(np.std(T2bs))
     return T2s, T2_errs
@@ -458,7 +459,7 @@ def T1_MOLLI_process(folder):
     rois=data[0][0]
     #plt.figure()
     for kk,roi in enumerate(rois[0:-2]):
-        print kk
+        print(kk)
         #plt.figure()
         inversion_recovery = IR_fit(tis, mean_signal_mat[0,kk,:],[])
         plt.plot(tis, mean_signal_mat[0,kk,:],'o')
@@ -481,7 +482,7 @@ def T1_MOLLI_bootstrap(folder,N=1000):
     for kk,roi in enumerate(rois[0:-2]):
         T1bs=[]
         npix=len(roi.get_indices()[0])
-        print npix
+        print(npix)
         pixels=roi.get_indices()
         for nn in np.arange(N):
             ind=np.random.randint(npix,size=npix)
@@ -507,7 +508,7 @@ def T1_MOLLI_bootstrap_everyTI(folder,N=1000):
         sig=[TI_image[roi.get_indices()].mean() for TI_image in images]               
         T1bs=[]
         npix=len(roi.get_indices()[0])
-        print npix
+        print(npix)
         pixels=roi.get_indices()
         
         for nn in np.arange(N):
@@ -718,7 +719,7 @@ def bootstrap_fit(image_list, roi,  model, x, iterations=1000):
     #sig=[img[pixels].mean() for img in image_list]
     #model.fit(x,sig)
     best_fit_pars=[p.value for p in model.pars]  #keep original best fit pars   
-    print best_fit_pars
+    print(best_fit_pars)
     
     
     par_records=[]

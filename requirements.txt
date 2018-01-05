@@ -1,0 +1,10 @@
+pyqt
+matplotlib
+numpy
+scipy
+scikit-image
+numexpr
+sympy
+pydicom
+xlwt
+unwrap
