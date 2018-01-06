@@ -183,7 +183,7 @@ class MainWindow(QtWidgets.QWidget):
        # self.uncertainty_checkbox = QtWidgets.QCheckBox('Fit with uncertainty', self)
 
         self.plot_im = ROISelectPlot(self)
-        self.color_plot_im = ColourROISelectPlot(self)
+        #self.color_plot_im = ColourROISelectPlot(self)  #remove middle plot.  Add functionality that allows user to select colormap on main plot.
         self.plot_graph = T2CurvePlot(self)
 
         layout_top = QtWidgets.QHBoxLayout()
@@ -217,7 +217,7 @@ class MainWindow(QtWidgets.QWidget):
 
         layout_mid = QtWidgets.QHBoxLayout()
         layout_mid.addWidget(self.plot_im)
-        layout_mid.addWidget(self.color_plot_im)
+        #layout_mid.addWidget(self.color_plot_im)
         layout_mid.addWidget(self.plot_graph)
 
         self.vmin_window_slider = QtWidgets.QSlider(
