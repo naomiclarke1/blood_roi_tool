@@ -34,9 +34,8 @@ try:
 except:
     pass
 from numpy import *
-from matplotlib import is_string_like
-import scipy
 import scipy.optimize as opt
+import six
 import sympy
 
 constrained = ["L-BFGS-B", "TNC", "SLSQP"]
@@ -349,9 +348,9 @@ class model:
         free parameters."""
         assert self.fitted, "Run fit first"
         x, y, dy = self.get_data(**data)
-        if is_string_like(par1):
+        if isinstance(par1, six.string_types):
             par1 = self[par1]
-        if is_string_like(par2):
+        if isinstance(par2, six.string_types):
             par2 = self[par2]
         p1 = par1.value, par1.frozen  # remember state
         p2 = par2.value, par2.frozen

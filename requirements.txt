@@ -1,7 +1,10 @@
 qtpy
+qtawesome
 matplotlib
 numpy
 scipy
 scikit-image
 numexpr
 pydicom
+sympy
+six
