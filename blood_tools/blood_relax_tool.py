@@ -14,9 +14,15 @@ from functools import wraps
 import pickle
 import math
 # anaconda module imports
+import qtpy
 from qtpy import QtGui, QtCore, QtWidgets
 import qtawesome
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT
+if qtpy.API == 'pyqt5':
+    from matplotlib.backends.backend_qt5agg import \
+        FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT
+else:
+    from matplotlib.backends.backend_qt4agg import \
+        FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT
 from matplotlib.figure import Figure
 import numpy as np
 # other python files that should be in the same dir
@@ -25,39 +31,11 @@ import blood_tools
 from . import fitting
 
 
-def QTSlotExceptionRationalizer(*args):
-    """
-    for strange, mostly undocumented reasons, the default behaviour of PyQt
-    is to silence all exceptions, which makes the debugging process impossible. 
-
-    Using this decorator fixes that, but PREVENTS THE FUNCTION FROM BEING
-    ABLE TO RETURN A VALUE.
-
-    DO NOT WRAP ANY METHODS THAT HAVE A RETURN STATEMENT WITH THIS DECORATOR
-    """
-    if len(args) == 0 or isinstance(args[0], types.FunctionType):
-        args = []
-
-    @QtCore.pyqtSlot(*args)
-    def slotdecorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args)
-            except:
-                print("Uncaught Exception in slot")
-                traceback.print_exc()
-        return wrapper
-
-    return slotdecorator
-
-
-class ROISelectPlot(QtGui.QWidget):
+class ROISelectPlot(QtWidgets.QWidget):
     """
     The plot canvas for the image, in the left and center panes of the GUI. 
     This is where the image is displayed, and the ROI is selected.
     """
-    @QTSlotExceptionRationalizer("bool")
     def __init__(self, parent=None):
         super(ROISelectPlot, self).__init__(parent)
         # initialize the plot area
@@ -66,13 +44,12 @@ class ROISelectPlot(QtGui.QWidget):
         self.canvas = FigureCanvas(self.figure)
         self.toolbar = NavigationToolbar2QT(self.canvas, self)
         # set the layout
-        layout = QtGui.QVBoxLayout()
+        layout = QtWidgets.QVBoxLayout()
         layout.addWidget(self.canvas)
         layout.addWidget(self.toolbar)
         self.setLayout(layout)
         self.im = None
 
-    @QTSlotExceptionRationalizer("bool")
     def make_image(self, im, vmin=5, vmax=95):
         # only turn autoscale on when first setting the image so that ROI
         # changes won't tweak the autoscale
@@ -99,7 +76,6 @@ class ColourROISelectPlot(ROISelectPlot):
     """
     Identical to ROI select plot, except colourized
     """
-    @QTSlotExceptionRationalizer("bool")
     def make_image(self, im, vmin=5, vmax=95):
         # only turn autoscale on when setting the image so that ROI changes
         # won't tweak the autoscale
@@ -111,12 +87,11 @@ class ColourROISelectPlot(ROISelectPlot):
         self.figure.canvas.draw()
 
 
-class T2CurvePlot(QtGui.QWidget):
+class T2CurvePlot(QtWidgets.QWidget):
     """
     The plot that displays the datapoints, the fitted monoexponential T2 curve, 
     and gives the value for T2 based on this fit.
     """
-    @QTSlotExceptionRationalizer("bool")
     def __init__(self, parent=None):
         super(T2CurvePlot, self).__init__(parent)
         self.figure = Figure()
@@ -124,14 +99,13 @@ class T2CurvePlot(QtGui.QWidget):
         self.canvas = FigureCanvas(self.figure)
         self.toolbar = NavigationToolbar2QT(self.canvas, self)
         # set the layout
-        layout = QtGui.QVBoxLayout()
+        layout = QtWidgets.QVBoxLayout()
         layout.addWidget(self.canvas)
         layout.addWidget(self.toolbar)
         self.setLayout(layout)
 
 
-class MainWindow(QtGui.QWidget):
-    @QTSlotExceptionRationalizer("bool")
+class MainWindow(QtWidgets.QWidget):
     def __init__(self):
         # draw the interface
         self.init_image_data()
@@ -142,7 +116,6 @@ class MainWindow(QtGui.QWidget):
         self.vmax = 95
         self.controls_enabled(False)
 
-    @QTSlotExceptionRationalizer("bool")
     def init_image_data(self):
         # initialize these to empty lists so that the slice select display will
         # work before loading images
@@ -164,62 +137,61 @@ class MainWindow(QtGui.QWidget):
         self.color_roi_patch = None
         self.included_slices = []
 
-    @QTSlotExceptionRationalizer("bool")
     def init_gui(self):
-        QtGui.QWidget.__init__(self, parent=None)
+        QtWidgets.QWidget.__init__(self, parent=None)
         # button for opening dicom directory
-        self.button_load = QtGui.QPushButton(
+        self.button_load = QtWidgets.QPushButton(
             qtawesome.icon('fa.folder-open-o'), '')
-        self.button_run = QtGui.QPushButton('Fit Data')
-        self.button_save_ROI = QtGui.QPushButton('Save ROIs')
-        self.button_load_ROI = QtGui.QPushButton('Load ROIs')
-        self.button_draw_roi = QtGui.QPushButton('Draw ROI')
-        self.button_exclude_slice = QtGui.QPushButton('Exclude Slice')
+        self.button_run = QtWidgets.QPushButton('Fit Data')
+        self.button_save_ROI = QtWidgets.QPushButton('Save ROIs')
+        self.button_load_ROI = QtWidgets.QPushButton('Load ROIs')
+        self.button_draw_roi = QtWidgets.QPushButton('Draw ROI')
+        self.button_exclude_slice = QtWidgets.QPushButton('Exclude Slice')
         # first/last prev/next buttons for scrolling through the dicoms
-        self.button_image_fwd = QtGui.QPushButton(
+        self.button_image_fwd = QtWidgets.QPushButton(
             qtawesome.icon('fa.chevron-right'), '')
         self.button_image_fwd.setObjectName('slice_fwd')
-        self.button_image_bwd = QtGui.QPushButton(
+        self.button_image_bwd = QtWidgets.QPushButton(
             qtawesome.icon('fa.chevron-left'), '')
         self.button_image_bwd.setObjectName('slice_bwd')
 
-        self.button_image_first = QtGui.QPushButton(
+        self.button_image_first = QtWidgets.QPushButton(
             qtawesome.icon('fa.step-backward'), '')
         self.button_image_first.setObjectName('slice_first')
-        self.button_image_last = QtGui.QPushButton(
+        self.button_image_last = QtWidgets.QPushButton(
             qtawesome.icon('fa.step-forward'), '')
         self.button_image_last.setObjectName('slice_last')
-        self.slice_label = QtGui.QLabel('(00/00)')
+        self.slice_label = QtWidgets.QLabel('(00/00)')
         # set whether the ROI should apply to a single slice or all of the
         # slices
-        self.combo_roi_scope = QtGui.QComboBox()
+        self.combo_roi_scope = QtWidgets.QComboBox()
         self.combo_roi_scope.addItems(['This Slice', 'All Slices'])
         self.combo_roi_scope.setCurrentIndex(0)
         # choose ROI shape
-        self.combo_roi_style = QtGui.QComboBox()
+        self.combo_roi_style = QtWidgets.QComboBox()
         self.combo_roi_style.addItems(['Polygon', 'Circle', 'Ellipse'])
         self.combo_roi_style.setCurrentIndex(0)
         # fit either a basic T1, or basic T2 fit
-        self.combo_relax_label = QtGui.QLabel('Fit Type')
-        self.combo_relax = QtGui.QComboBox()
+        self.combo_relax_label = QtWidgets.QLabel('Fit Type')
+        self.combo_relax = QtWidgets.QComboBox()
         self.combo_relax.addItems(['T1', 'T2'])
         self.combo_relax.setCurrentIndex(0)
 
-        self.roi_area_label = QtGui.QLabel(
+        self.roi_area_label = QtWidgets.QLabel(
             'ROI Area: 0.00 (pixels) / 0.00 (mm^2)')
         # doesn't actually do anything
-       # self.uncertainty_checkbox = QtGui.QCheckBox('Fit with uncertainty', self)
+       # self.uncertainty_checkbox = QtWidgets.QCheckBox('Fit with uncertainty', self)
 
         self.plot_im = ROISelectPlot(self)
         self.color_plot_im = ColourROISelectPlot(self)
         self.plot_graph = T2CurvePlot(self)
 
-        layout_top = QtGui.QHBoxLayout()
+        layout_top = QtWidgets.QHBoxLayout()
         layout_top.addSpacing(10)
         layout_top.addWidget(self.button_load)
 
         layout_top.addStretch()
-        layout_top.addWidget(QtGui.QLabel('Change Slice:'))
+        layout_top.addWidget(QtWidgets.QLabel('Change Slice:'))
 
         layout_top.addWidget(self.button_image_first)
         layout_top.addWidget(self.button_image_bwd)
@@ -228,9 +200,9 @@ class MainWindow(QtGui.QWidget):
         layout_top.addWidget(self.slice_label)
 
         layout_top.addStretch()
-        layout_top.addWidget(QtGui.QLabel('ROI Style:'))
+        layout_top.addWidget(QtWidgets.QLabel('ROI Style:'))
         layout_top.addWidget(self.combo_roi_style)
-        layout_top.addWidget(QtGui.QLabel('Apply ROI to:'))
+        layout_top.addWidget(QtWidgets.QLabel('Apply ROI to:'))
         layout_top.addWidget(self.combo_roi_scope)
         layout_top.addWidget(self.button_draw_roi)
         layout_top.addWidget(self.button_exclude_slice)
@@ -243,30 +215,30 @@ class MainWindow(QtGui.QWidget):
         layout_top.addWidget(self.button_run)
         layout_top.addSpacing(10)
 
-        layout_mid = QtGui.QHBoxLayout()
+        layout_mid = QtWidgets.QHBoxLayout()
         layout_mid.addWidget(self.plot_im)
         layout_mid.addWidget(self.color_plot_im)
         layout_mid.addWidget(self.plot_graph)
 
-        self.vmin_window_slider = QtGui.QSlider(
+        self.vmin_window_slider = QtWidgets.QSlider(
             orientation=QtCore.Qt.Horizontal, minimum=0, maximum=100)
         self.vmin_window_slider.setValue(5)
-        self.vmax_window_slider = QtGui.QSlider(
+        self.vmax_window_slider = QtWidgets.QSlider(
             orientation=QtCore.Qt.Horizontal, minimum=0, maximum=100)
         self.vmax_window_slider.setValue(95)
 
-        layout_ROI_calc = QtGui.QHBoxLayout()
+        layout_ROI_calc = QtWidgets.QHBoxLayout()
         layout_ROI_calc.addWidget(self.roi_area_label)
-        layout_slider1 = QtGui.QHBoxLayout()
-        layout_slider1.addWidget(QtGui.QLabel('Window Min:'))
+        layout_slider1 = QtWidgets.QHBoxLayout()
+        layout_slider1.addWidget(QtWidgets.QLabel('Window Min:'))
         layout_slider1.addSpacing(3)
         layout_slider1.addWidget(self.vmin_window_slider)
 
-        layout_slider2 = QtGui.QHBoxLayout()
-        layout_slider2.addWidget(QtGui.QLabel('Window Max:'))
+        layout_slider2 = QtWidgets.QHBoxLayout()
+        layout_slider2.addWidget(QtWidgets.QLabel('Window Max:'))
         layout_slider2.addWidget(self.vmax_window_slider)
 
-        layout_main = QtGui.QVBoxLayout()
+        layout_main = QtWidgets.QVBoxLayout()
         layout_main.addLayout(layout_top)
         layout_main.addLayout(layout_mid)
         layout_main.addLayout(layout_ROI_calc)
@@ -287,7 +259,6 @@ class MainWindow(QtGui.QWidget):
         self.vmin_window_slider.valueChanged.connect(self.set_image_window)
         self.vmax_window_slider.valueChanged.connect(self.set_image_window)
 
-    @QTSlotExceptionRationalizer("bool")
     def exclude_current_slice(self, *e):
         """feature requested by Brahmdeep allows them to exclude a motion corrupted slice"""
         if self.included_slices[self.image_index]:
@@ -307,16 +278,15 @@ class MainWindow(QtGui.QWidget):
         to_save['ROIs'] = self.image_ROIs
         to_save['included_slices'] = self.included_slices
         if self.directory:
-            out = QtGui.QFileDialog.getSaveFileName(
+            out = QtWidgets.QFileDialog.getSaveFileName(
                 directory=self.directory, caption='ROI filename')
         else:
-            out = QtGui.QFileDialog.getSaveFileName(caption='ROI filename')
+            out = QtWidgets.QFileDialog.getSaveFileName(caption='ROI filename')
         self.roi_path = out
         f = open(self.roi_path, 'w')
         pickle.dump(to_save, f)
         f.close()
 
-    @QTSlotExceptionRationalizer("bool")
     def roi_controls_enable(self, enable=True):
         """disable the ROI controls when the slice is excluded, to provide
         a salient visual cue that this slice isn't being taken into account"""
@@ -330,7 +300,6 @@ class MainWindow(QtGui.QWidget):
         self.combo_roi_scope.setEnabled(enable)
         self.button_draw_roi.setEnabled(enable)
 
-    @QTSlotExceptionRationalizer("bool")
     def controls_enabled(self, enable=True):
         """disable or enable all controls, to keep the user from pressing buttons
         that have no function when datasets aren't yet loaded"""
@@ -347,7 +316,6 @@ class MainWindow(QtGui.QWidget):
         self.button_save_ROI.setEnabled(enable)
         self.button_load_ROI.setEnabled(enable)
 
-    @QTSlotExceptionRationalizer("bool")
     def set_image_window(self, *e):
         self.vmin = self.vmin_window_slider.value()  # image window minimum
         self.vmax = self.vmax_window_slider.value()  # image window maximum
@@ -364,7 +332,6 @@ class MainWindow(QtGui.QWidget):
         else:  # matplotlib will throw an error if the window is negative
             pass
 
-    @QTSlotExceptionRationalizer("bool")
     def clear_roi(self):
         # remove the ROI from the screen, but do not delete it until it is
         # overwritten by another ROI
@@ -392,7 +359,6 @@ class MainWindow(QtGui.QWidget):
         color_figure = self.color_plot_im.get_figure()
         color_figure.canvas.draw()
 
-    @QTSlotExceptionRationalizer("bool")
     def change_image(self):
         # serialize existing ROIs to file, this is quick+dirty b/c I haven't
         # figured out how to detect the ROI complete event in this class
@@ -459,7 +425,6 @@ class MainWindow(QtGui.QWidget):
             self.load_roi()
             self.slice_label.setText("{}/{}".format(num, demon))
 
-    @QTSlotExceptionRationalizer("bool")
     def save_analysis(self):
         """save ROIs and the slice_included list to a .ROIs file"""
         to_save = {}
@@ -469,23 +434,22 @@ class MainWindow(QtGui.QWidget):
             pickle.dump(to_save, f)
             f.close()
 
-    @QTSlotExceptionRationalizer("bool")
     def load_prev_analysis(self):
         """Load the previous ROIs and slice inclusion list. I opted to prompt the user
         so that they understand where the ROIs come from as opposed to having them
         magically appear
         """
 #        quit_msg = "Would you like to reload your previous ROIs for this series?"
-#        reply = QtGui.QMessageBox.question(self, 'Message',
-#                         quit_msg, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+#        reply = QtWidgets.QMessageBox.question(self, 'Message',
+#                         quit_msg, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
 #
-#        if reply == QtGui.QMessageBox.Yes:
+#        if reply == QtWidgets.QMessageBox.Yes:
         self.clear_roi()
         if self.directory:
-            infilename = QtGui.QFileDialog.getOpenFileName(
+            infilename = QtWidgets.QFileDialog.getOpenFileName(
                 directory=self.directory, caption='ROI filename')
         else:
-            infilename = QtGui.QFileDialog.getOpenFileName(
+            infilename = QtWidgets.QFileDialog.getOpenFileName(
                 caption='ROI filename')
         f = open(infilename, 'r')
         to_load = pickle.load(f)
@@ -494,7 +458,6 @@ class MainWindow(QtGui.QWidget):
         self.included_slices = to_load['included_slices']
         self.load_roi()
 
-    @QTSlotExceptionRationalizer("bool")
     def calc_ROI_area(self):
         """using pixel spacing tag in the DICOM header, calculate the area
         represented by the pixels in the ROI
@@ -513,7 +476,6 @@ class MainWindow(QtGui.QWidget):
 
     # todo: rework these into one simpler method (its tricky because they're
     # callbacks!)
-    @QTSlotExceptionRationalizer("bool")
     def grey_roi_complete_callback(self):
         """method called when user finishes drawing an ROI on the greyscale plot
         mirrors the ROI over the colour plot and saves the ROI"""
@@ -530,7 +492,6 @@ class MainWindow(QtGui.QWidget):
         self.clear_roi()
         self.load_roi()
 
-    @QTSlotExceptionRationalizer("bool")
     def color_roi_complete_callback(self):
         """method called when user finishes drawing an ROI on the color plot
         mirrors the ROI over the greyscale plot and saves the ROI"""
@@ -557,7 +518,6 @@ class MainWindow(QtGui.QWidget):
     def get_relax_type(self):
         return self.combo_relax.currentText()
 
-    @QTSlotExceptionRationalizer("bool")
     def choose_dir(self, *event):
         """opens a directory choose dialog box, allows the user to select their
         dicom series of interest and loads that series."""
@@ -565,10 +525,10 @@ class MainWindow(QtGui.QWidget):
         self.plot_graph.figure.canvas.draw()
 
         if self.directory:
-            out = QtGui.QFileDialog.getExistingDirectory(
+            out = QtWidgets.QFileDialog.getExistingDirectory(
                 directory=os.path.split(self.directory)[0], caption='MRI Data Directory')
         else:
-            out = QtGui.QFileDialog.getExistingDirectory(
+            out = QtWidgets.QFileDialog.getExistingDirectory(
                 caption='MRI Data Directory')
 
         if out:
@@ -611,7 +571,7 @@ class MainWindow(QtGui.QWidget):
             self.included_slices = [True for _ in range(len(self.images))]
 
             if not self.images:
-                error = QtGui.QErrorMessage()
+                error = QtWidgets.QErrorMessage()
                 error.showMessage(
                     'The selected directory does not contain a DICOM series which this widget is capable of loading')
                 error.exec_()
@@ -644,7 +604,6 @@ class MainWindow(QtGui.QWidget):
         else:  # user hit the cancel or x button to leave the dialog
             pass
 
-    @QTSlotExceptionRationalizer("bool")
     def load_roi(self):
         """if the active image has a previously drawn ROI, this method reloads its"""
 
@@ -663,11 +622,10 @@ class MainWindow(QtGui.QWidget):
                 self.color_plot_im.axes, self.color_plot_im.figure, 'black')
             self.calc_ROI_area()
 
-    @QTSlotExceptionRationalizer("bool")
     def start_roi(self):
         """create a new ROI for the image"""
         if not len(self.images) > 0:
-            error = QtGui.QErrorMessage()
+            error = QtWidgets.QErrorMessage()
             error.showMessage(
                 'You must a load a series of images before drawing the ROI')
             error.exec_()
@@ -686,13 +644,12 @@ class MainWindow(QtGui.QWidget):
                                            self.color_plot_im.get_axes(), self.color_plot_im.get_figure(),
                                            roi_style, 'black', self.color_roi_complete_callback)
 
-    @QTSlotExceptionRationalizer("bool")
     def process_data(self, *event):
         """Gets the prep times and populates the T1/T2 plot"""
         # check that user has drawn all of the required ROIs
         for ii, fn in enumerate(self.image_filename_list):
             if self.included_slices[ii] and not fn in self.image_ROIs:
-                error = QtGui.QErrorMessage()
+                error = QtWidgets.QErrorMessage()
                 error.showMessage(
                     "You must draw an ROI on every included slice before you can fit the data. Use the 'All Slices' option if the ROIs are conincident accross the slices")
                 error.exec_()
@@ -703,7 +660,7 @@ class MainWindow(QtGui.QWidget):
             roi_list.append(self.image_ROIs[image_filename])
 
         if not len(self.images) > 0:
-            error = QtGui.QErrorMessage()
+            error = QtWidgets.QErrorMessage()
             error.showMessage(
                 'You must load a series of dicom images before fitting the data')
             error.exec_()
@@ -718,7 +675,7 @@ class MainWindow(QtGui.QWidget):
             ti, signal, stddev = get_T1_decay_signal(
                 self.image_attributes, self.images, roi_list, self.included_slices)
             if not len(ti) or ti[0] == 0:
-                error = QtGui.QErrorMessage()
+                error = QtWidgets.QErrorMessage()
                 error.showMessage(
                     'Failed to find T1 recovery times for this dataset, ensure that this is a T1 series')
                 error.exec_()
@@ -775,7 +732,7 @@ class MainWindow(QtGui.QWidget):
                 self.dicom_list, self.images, roi_list, self.included_slices)
             # throw an error if no T2 prep times found in the dicom header
             if not len(te):
-                error = QtGui.QErrorMessage()
+                error = QtWidgets.QErrorMessage()
                 error.showMessage(
                     'Failed to find prep times for this dataset, ensure that this is a T2 series')
                 error.exec_()
@@ -910,7 +867,7 @@ def fit_bootstrap(x, sigs, model):
 
 
 def main():
-    app = QtGui.QApplication.instance() or QtGui.QApplication([])
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     win = MainWindow()
     win.show()
     app.exec_()
