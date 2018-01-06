@@ -50,13 +50,13 @@ class ROISelectPlot(QtWidgets.QWidget):
         self.setLayout(layout)
         self.im = None
 
-    def make_image(self, im, vmin=5, vmax=95):
+    def make_image(self, im, colormap, vmin=5, vmax=95):
         # only turn autoscale on when first setting the image so that ROI
         # changes won't tweak the autoscale
         self.im = im
         self.axes.set_autoscale_on(True)
         self.mpl_im = self.axes.imshow(im, vmin=np.percentile(
-            im, vmin), vmax=np.percentile(im, vmax), cmap='gray', origin='upper')
+            im, vmin), vmax=np.percentile(im, vmax), cmap=colormap, origin='upper')
         self.axes.set_autoscale_on(False)
         self.figure.canvas.draw()
 
@@ -76,7 +76,7 @@ class ColourROISelectPlot(ROISelectPlot):
     """
     Identical to ROI select plot, except colourized
     """
-    def make_image(self, im, vmin=5, vmax=95):
+    def make_image(self, im, colormap, vmin=5, vmax=95):
         # only turn autoscale on when setting the image so that ROI changes
         # won't tweak the autoscale
         self.im = im
@@ -171,6 +171,10 @@ class MainWindow(QtWidgets.QWidget):
         self.combo_roi_style = QtWidgets.QComboBox()
         self.combo_roi_style.addItems(['Polygon', 'Circle', 'Ellipse'])
         self.combo_roi_style.setCurrentIndex(0)
+        # choose colormap
+	self.combo_colormap = QtWidgets.QComboBox()
+        self.combo_colormap.addItems(['gray','jet','hot','viridis'])
+	self.combo_colormap.setCurrentIndex(0)
         # fit either a basic T1, or basic T2 fit
         self.combo_relax_label = QtWidgets.QLabel('Fit Type')
         self.combo_relax = QtWidgets.QComboBox()
@@ -190,7 +194,7 @@ class MainWindow(QtWidgets.QWidget):
         layout_top.addSpacing(10)
         layout_top.addWidget(self.button_load)
 
-        layout_top.addStretch()
+        #layout_top.addStretch()
         layout_top.addWidget(QtWidgets.QLabel('Change Slice:'))
 
         layout_top.addWidget(self.button_image_first)
@@ -200,21 +204,25 @@ class MainWindow(QtWidgets.QWidget):
         layout_top.addWidget(self.slice_label)
 
         layout_top.addStretch()
-        layout_top.addWidget(QtWidgets.QLabel('ROI Style:'))
-        layout_top.addWidget(self.combo_roi_style)
-        layout_top.addWidget(QtWidgets.QLabel('Apply ROI to:'))
-        layout_top.addWidget(self.combo_roi_scope)
-        layout_top.addWidget(self.button_draw_roi)
-        layout_top.addWidget(self.button_exclude_slice)
-        layout_top.addStretch()
-        layout_top.addWidget(self.button_save_ROI)
-        layout_top.addWidget(self.button_load_ROI)
-        layout_top.addWidget(self.combo_relax_label)
-        layout_top.addWidget(self.combo_relax)
-        # layout_top.addWidget(self.uncertainty_checkbox)
-        layout_top.addWidget(self.button_run)
-        layout_top.addSpacing(10)
 
+        layout_subTop = QtWidgets.QHBoxLayout()
+        layout_subTop.addWidget(QtWidgets.QLabel('ROI Style:'))
+        layout_subTop.addWidget(self.combo_roi_style)
+        layout_subTop.addWidget(QtWidgets.QLabel('Apply ROI to:'))
+        layout_subTop.addWidget(self.combo_roi_scope)
+        layout_subTop.addWidget(self.button_draw_roi)
+        layout_subTop.addWidget(self.button_exclude_slice)
+        layout_subTop.addWidget(self.button_save_ROI)
+        layout_subTop.addWidget(self.button_load_ROI)
+        layout_subTop.addStretch()
+        
+	layout_sub_subTop = QtWidgets.QHBoxLayout()	
+	layout_sub_subTop.addStretch()	
+	layout_sub_subTop.addWidget(self.combo_relax_label)
+        layout_sub_subTop.addWidget(self.combo_relax)
+        # layout_top.addWidget(self.uncertainty_checkbox)
+        layout_sub_subTop.addWidget(self.button_run)
+        
         layout_mid = QtWidgets.QHBoxLayout()
         layout_mid.addWidget(self.plot_im)
         #layout_mid.addWidget(self.color_plot_im)
@@ -228,6 +236,9 @@ class MainWindow(QtWidgets.QWidget):
         self.vmax_window_slider.setValue(95)
 
         layout_ROI_calc = QtWidgets.QHBoxLayout()
+	layout_ROI_calc.addWidget(QtWidgets.QLabel('Colormap:'))
+        layout_ROI_calc.addWidget(self.combo_colormap)
+	layout_ROI_calc.addStretch()
         layout_ROI_calc.addWidget(self.roi_area_label)
         layout_slider1 = QtWidgets.QHBoxLayout()
         layout_slider1.addWidget(QtWidgets.QLabel('Window Min:'))
@@ -240,6 +251,8 @@ class MainWindow(QtWidgets.QWidget):
 
         layout_main = QtWidgets.QVBoxLayout()
         layout_main.addLayout(layout_top)
+	layout_main.addLayout(layout_subTop)
+	layout_main.addLayout(layout_sub_subTop)
         layout_main.addLayout(layout_mid)
         layout_main.addLayout(layout_ROI_calc)
         layout_main.addLayout(layout_slider1)
@@ -258,6 +271,13 @@ class MainWindow(QtWidgets.QWidget):
         self.button_load_ROI.pressed.connect(self.load_prev_analysis)
         self.vmin_window_slider.valueChanged.connect(self.set_image_window)
         self.vmax_window_slider.valueChanged.connect(self.set_image_window)
+	self.combo_colormap.currentIndexChanged.connect(self.colormap_changed)
+
+    def colormap_changed(self, *e):
+	colormap=self.get_colormap()
+	self.plot_im.make_image(
+                self.images[self.image_index], colormap, self.vmin, self.vmax)	
+
 
     def exclude_current_slice(self, *e):
         """feature requested by Brahmdeep allows them to exclude a motion corrupted slice"""
@@ -313,6 +333,7 @@ class MainWindow(QtWidgets.QWidget):
         self.button_image_bwd.setEnabled(enable)
         self.button_exclude_slice.setEnabled(enable)
         self.combo_roi_style.setEnabled(enable)
+	self.combo_colormap.setEnabled(enable)
         self.combo_relax.setEnabled(enable)
         self.combo_roi_scope.setEnabled(enable)
         self.button_save_ROI.setEnabled(enable)
@@ -327,10 +348,10 @@ class MainWindow(QtWidgets.QWidget):
             im_vmax = np.percentile(self.plot_im.im, self.vmax)
 
             self.plot_im.mpl_im.set_clim(im_vmin, im_vmax)
-            self.color_plot_im.mpl_im.set_clim(im_vmin, im_vmax)
+            #self.color_plot_im.mpl_im.set_clim(im_vmin, im_vmax)
 
             self.plot_im.figure.canvas.draw()
-            self.color_plot_im.figure.canvas.draw()
+            #self.color_plot_im.figure.canvas.draw()
         else:  # matplotlib will throw an error if the window is negative
             pass
 
@@ -345,11 +366,11 @@ class MainWindow(QtWidgets.QWidget):
             self.color_roi_patch.remove()
             self.color_roi_patch = None
 
-        if self.color_activeROI is not None:
-            self.color_activeROI.remove()
-            axes = self.color_plot_im.get_axes()
-            axes = []
-            self.color_activeROI = None
+        #if self.color_activeROI is not None:
+        #    self.color_activeROI.remove()
+        #    axes = self.color_plot_im.get_axes()
+        #   axes = []
+        #   self.color_activeROI = None
         if self.grey_activeROI is not None:  # check if there is an ROI
             self.grey_activeROI.remove()
             axes = self.plot_im.get_axes()
@@ -358,8 +379,8 @@ class MainWindow(QtWidgets.QWidget):
 
         grey_figure = self.plot_im.get_figure()
         grey_figure.canvas.draw()
-        color_figure = self.color_plot_im.get_figure()
-        color_figure.canvas.draw()
+        #color_figure = self.color_plot_im.get_figure()
+        #color_figure.canvas.draw()
 
     def change_image(self):
         # serialize existing ROIs to file, this is quick+dirty b/c I haven't
@@ -417,13 +438,13 @@ class MainWindow(QtWidgets.QWidget):
                                    for att in self.image_attributes]
                 title_str = 'TI=%.0f ms' % inversion_times[self.image_index]
             axes.set_title(title_str)
-            self.color_plot_im.mpl_im.set_data(self.images[self.image_index])
-            axes = self.color_plot_im.get_axes()
-            axes.set_title(title_str)
-            self.set_image_window()
+            #self.color_plot_im.mpl_im.set_data(self.images[self.image_index])
+            #axes = self.color_plot_im.get_axes()
+            #axes.set_title(title_str)
+            #self.set_image_window()
 
             self.plot_im.figure.canvas.draw()
-            self.color_plot_im.figure.canvas.draw()
+            #self.color_plot_im.figure.canvas.draw()
             self.load_roi()
             self.slice_label.setText("{}/{}".format(num, demon))
 
@@ -519,6 +540,10 @@ class MainWindow(QtWidgets.QWidget):
         current_text = self.combo_roi_style.currentText()
         return current_text
 
+    def get_colormap(self):
+	current_colormap=self.combo_colormap.currentText()
+        return current_colormap
+
     def get_relax_type(self):
         return self.combo_relax.currentText()
 
@@ -585,8 +610,9 @@ class MainWindow(QtWidgets.QWidget):
                 self.image_filename_list.append(attributes['filename'])
 
             self.image_filename = self.image_filename_list[self.image_index]
+            colormap=self.get_colormap()
             self.plot_im.make_image(
-                self.images[self.image_index], self.vmin, self.vmax)
+                self.images[self.image_index], colormap, self.vmin, self.vmax)
             axes = self.plot_im.get_axes()
             if self.t2:
                 title_str = 'TE=%.0f ms' % self.prep_times[self.image_index]
@@ -596,10 +622,10 @@ class MainWindow(QtWidgets.QWidget):
                 title_str = 'TI=%.0f ms' % inversion_times[self.image_index]
             axes.set_title(title_str)
             self.controls_enabled(True)
-            self.color_plot_im.make_image(
-                self.images[self.image_index], self.vmin, self.vmax)
-            axes = self.color_plot_im.get_axes()
-            axes.set_title(title_str)
+            #self.color_plot_im.make_image(
+            #    self.images[self.image_index], self.vmin, self.vmax)
+            #axes = self.color_plot_im.get_axes()
+            #axes.set_title(title_str)
             num, demon = '01', str(len(self.images)).rjust(2, '0')
             self.slice_label.setText("{}/{}".format(num, demon))
 
@@ -622,8 +648,8 @@ class MainWindow(QtWidgets.QWidget):
             self.color_activeROI = self.image_ROIs[self.image_filename]
             self.grey_roi_patch = self.grey_activeROI.draw(
                 self.plot_im.axes, self.plot_im.figure, 'red')
-            self.color_roi_patch = self.color_activeROI.draw(
-                self.color_plot_im.axes, self.color_plot_im.figure, 'black')
+            #self.color_roi_patch = self.color_activeROI.draw(
+            #    self.color_plot_im.axes, self.color_plot_im.figure, 'black')
             self.calc_ROI_area()
 
     def start_roi(self):
@@ -644,9 +670,9 @@ class MainWindow(QtWidgets.QWidget):
                                           self.plot_im.get_axes(), self.plot_im.get_figure(),
                                           roi_style, 'red', self.grey_roi_complete_callback)
 
-        self.color_activeROI = ROI.new_ROI(self.color_plot_im.get_mpl_im(),
-                                           self.color_plot_im.get_axes(), self.color_plot_im.get_figure(),
-                                           roi_style, 'black', self.color_roi_complete_callback)
+        #self.color_activeROI = ROI.new_ROI(self.color_plot_im.get_mpl_im(),
+        #                                   self.color_plot_im.get_axes(), self.color_plot_im.get_figure(),
+        #                                   roi_style, 'black', self.color_roi_complete_callback)
 
     def process_data(self, *event):
         """Gets the prep times and populates the T1/T2 plot"""
