@@ -14,7 +14,6 @@ import pylab as plt
 import dicom
 import sys
 import matplotlib
-import xlwt
 import itertools
 import re
 
@@ -381,6 +380,7 @@ def check_T1_chi_surface(folders_to_process, sample):
 
 
 def make_case_report_csv(T2_dict, T1_dict, filename):
+    import xlwt
     book = xlwt.Workbook(encoding="utf-8")
     sheet1 = book.add_sheet("sheet1")
     key_list = T2_dict.keys()
@@ -421,6 +421,7 @@ def make_case_report_csv(T2_dict, T1_dict, filename):
 
 
 def make_T2_report_csv(T2_dict_list, filename):
+    import xlwt
     book = xlwt.Workbook(encoding="utf-8")
     sheets = ['18apr2015', '25apr2015', '23may2015', '6jun2015', '27jun2015']
     for jj, T2_dict in enumerate(T2_dict_list):

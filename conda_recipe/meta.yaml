@@ -1,0 +1,33 @@
+package:
+   name: blood_tools
+   version: 0.0.1
+
+source:
+   path: ..
+
+build:
+  number: 0
+  entry_points:
+    - blood_tools = blood_tools.cli.main:main
+  script: python setup.py install --single-version-externally-managed --record=out.txt
+  noarch: generic
+
+requirements:
+  run:
+    - qtpy
+    - pyqt
+    - qtawesome
+    - matplotlib
+    - numpy
+    - scipy
+    - scikit-image
+    - numexpr
+    - pydicom
+    - sympy
+    - six
+
+about:
+  home: https://github.com/shportnoy/blood_roi_tool
+  license: BSD
+  license_file: LICENSE
+  summary: Bloor MRI Analysis tool
