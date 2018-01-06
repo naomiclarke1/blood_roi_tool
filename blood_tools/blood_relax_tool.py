@@ -27,7 +27,7 @@ from matplotlib.figure import Figure
 import numpy as np
 # other python files that should be in the same dir
 from . import ROI
-import blood_tools
+from . import blood_tools
 from . import fitting
 
 
@@ -282,9 +282,11 @@ class MainWindow(QtWidgets.QWidget):
                 directory=self.directory, caption='ROI filename')
         else:
             out = QtWidgets.QFileDialog.getSaveFileName(caption='ROI filename')
+        if len(out) == 2:
+            out = out[0]
         self.roi_path = out
-        f = open(self.roi_path, 'w')
-        pickle.dump(to_save, f)
+        f = open(self.roi_path, 'wb')
+        pickle.dump(to_save, f, 2)
         f.close()
 
     def roi_controls_enable(self, enable=True):
@@ -451,7 +453,9 @@ class MainWindow(QtWidgets.QWidget):
         else:
             infilename = QtWidgets.QFileDialog.getOpenFileName(
                 caption='ROI filename')
-        f = open(infilename, 'r')
+        if len(infilename) == 2:
+            infilename = infilename[0]
+        f = open(infilename, 'rb')
         to_load = pickle.load(f)
         f.close()
         self.image_ROIs = to_load['ROIs']
