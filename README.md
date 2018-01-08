@@ -7,21 +7,21 @@ Installation
 ------------
 
 The following are required:
-    1. python (version 2 or 3), and
-    2. the following packages:
-        * qtpy
-        * pyqt, qt (version 4 or 5)
-        * qtawesome
-        * matplotlib
-        * numpy
-        * scipy
-        * scikit-image
-        * numexpr
-        * pydicom
-        * sympy
-        * six
+1. python (version 2 or 3), and
+2. the following packages:
+* qtpy
+* pyqt, qt (version 4 or 5)
+* qtawesome
+* matplotlib
+* numpy
+* scipy
+* scikit-image
+* numexpr
+* pydicom
+* sympy
+* six
 
-The easiest way to install python is by downloading anaconda:
+The easiest way to install python is by downloading [anaconda]:
 (https://www.anaconda.com/download/)
 
 Once anaconda is installed, run the following command to obtain the necessary packages (listed above):
