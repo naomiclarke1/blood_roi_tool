@@ -39,19 +39,23 @@ class ROI(object):
         self.end_point = []
         self.line = None
         self.lines = []
-        self.im = im.get_size()
+        if isinstance(im,list):
+            self.im=im
+        else:    
+            self.im = im.get_size()
         self.xcoords = []
         self.ycoords = []
         self.axes = ax
-        self.fig = fig
-        self.fig.canvas.draw()
-        self.patch = None
-        cid1 = fig.canvas.mpl_connect(
-            'motion_notify_event', self.motion_notify_callback)
-        cid2 = fig.canvas.mpl_connect(
-            'button_press_event', self.button_press_callback)
-        self.events = cid1, cid2
-        self.completion_callback = completion_callback
+        if fig is not None:
+            self.fig = fig
+            self.fig.canvas.draw()
+            self.patch = None
+            cid1 = fig.canvas.mpl_connect(
+                'motion_notify_event', self.motion_notify_callback)
+            cid2 = fig.canvas.mpl_connect(
+                'button_press_event', self.button_press_callback)
+            self.events = cid1, cid2
+            self.completion_callback = completion_callback
         self.color = color
 
     def __getstate__(self):
@@ -146,7 +150,8 @@ class ROI(object):
                 self.patch = ax.fill(self.xcoords, self.ycoords, alpha=0)[0]
                 self.disconnect()
                 self.fig.canvas.draw()
-                self.completion_callback()
+                if self.completion_callback is not None:
+                    self.completion_callback()
             else:
                 pass  # do not respond to any other types of key presses
 
@@ -203,21 +208,24 @@ class ROI(object):
 class ROIcircle(ROI):
     def __init__(self, im, ax, fig, color='r', completion_callback=None):
         self.circ = None
-        self.im = im.get_size()
+        if isinstance(im,list):
+            self.im=im
+        else:    
+            self.im = im.get_size()
         self.fig = fig
         self.axes = ax
         # preserve these so that we can blow away the self.circ object as
         # needed
         self.radius = None
         self.center = None
-
-        self.fig.canvas.draw()
-        cid1 = fig.canvas.mpl_connect(
-            'motion_notify_event', self.motion_notify_callback)
-        cid2 = fig.canvas.mpl_connect(
-            'button_press_event', self.button_press_callback)
-        self.events = cid1, cid2
-        self.completion_callback = completion_callback
+        if fig is not None:
+            self.fig.canvas.draw()
+            cid1 = fig.canvas.mpl_connect(
+                'motion_notify_event', self.motion_notify_callback)
+            cid2 = fig.canvas.mpl_connect(
+                'button_press_event', self.button_press_callback)
+            self.events = cid1, cid2
+            self.completion_callback = completion_callback
         self.color = color
 
     def __getstate__(self):
@@ -279,7 +287,8 @@ class ROIcircle(ROI):
                     self.circ.set_linewidth(1)
                     self.circ.set_alpha(1)
                     self.disconnect()
-                    self.completion_callback()
+                    if self.completion_callback is not None:
+                        self.completion_callback()
             elif event.button == 3 and self.circ != None:  # middle button: remove last segment
                 self.circ.remove()
                 self.circ = None
@@ -378,7 +387,8 @@ class ROIellipse(ROIcircle):
 
                     self.height = self.circ.height
                     self.width = self.circ.width
-                    self.completion_callback()
+                    if self.completion_callback is not None:
+                        self.completion_callback()
             elif event.button == 3 and self.circ is not None:  # middle button: remove last segment
                 self.circ.remove()
                 self.circ = None
@@ -444,4 +454,33 @@ def draw_ROI(self, im=None, color='r'):
         mycirc.set_facecolor('none')
         ax.add_artist(mycirc)
 
-    return 0
+def write_json(self, json_filename):
+    """Save ROI as a JSON file"""
+    import json
+    roi_dict = self.__getstate__()
+    with open(json_filename, 'w') as f:
+        json.dump(roi_dict, f)
+  
+
+def load_from_json(json_filename):    
+    """Load ROI from JSON file"""
+    import json
+    with open(json_filename, 'r') as f:
+        roi_dict = json.load(f)
+    
+    #Now make an ROI with the properties specified in roi_dict
+    if 'circle' in roi_dict:  #ROI is a circle or ellipse
+        if len(roi_dict['circle'])>2:  #it's an ellipse
+            roi_to_load = ROIellipse(roi_dict['im'], None, None, roi_dict['color'])   
+        else:   #it's a circle   
+            roi_to_load = ROIcircle(roi_dict['im'], None, None, roi_dict['color'])
+        roi_to_load.__setstate__(roi_dict)  
+    
+    else:    #ROI is a polygon
+        roi_to_load = ROI(roi_dict['im'], None, None, roi_dict['color'])
+        roi_to_load.__setstate__(roi_dict)
+        
+    return roi_to_load     
+
+    
+    
