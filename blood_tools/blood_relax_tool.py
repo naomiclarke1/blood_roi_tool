@@ -309,8 +309,12 @@ class MainWindow(QtWidgets.QWidget):
             out = QtWidgets.QFileDialog.getSaveFileName(caption='ROI filename')
         if len(out) == 2:
             out = out[0]
-        self.roi_path = out + '.json'
-        f = open(self.roi_path, 'wb')
+        if not out:
+            return
+        if not out.endswith('.json'):
+            out = out + '.json'
+        self.roi_path = out
+        f = open(self.roi_path, 'w')
     
         import json
         json.dump(to_save,f)
@@ -501,6 +505,8 @@ class MainWindow(QtWidgets.QWidget):
                 caption='ROI filename')
         if len(infilename) == 2:
             infilename = infilename[0]
+        if not infilename:
+            return
         f = open(infilename, 'r')
         import json
         #to_load = pickle.load(f)
@@ -619,6 +625,13 @@ class MainWindow(QtWidgets.QWidget):
             if VD13_prep_times:
                 self.prep_times = VD13_prep_times
 
+            if not self.images:
+                error = QtWidgets.QErrorMessage()
+                error.showMessage(
+                    'The selected directory does not contain a DICOM series which this widget is capable of loading')
+                error.exec_()
+                return
+
             if len(self.prep_times) == len(self.images):
                 self.t2 = 1
                 self.image_index = np.argsort(self.prep_times)[0]
@@ -627,12 +640,6 @@ class MainWindow(QtWidgets.QWidget):
             # initiate included slices to be all True
             self.included_slices = [True for _ in range(len(self.images))]
 
-            if not self.images:
-                error = QtWidgets.QErrorMessage()
-                error.showMessage(
-                    'The selected directory does not contain a DICOM series which this widget is capable of loading')
-                error.exec_()
-                return
 
             for attributes in self.image_attributes:
                 self.image_filename_list.append(attributes['filename'])

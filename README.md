@@ -22,7 +22,12 @@ The following are required:
 
 The easiest way to install these is using conda, as part of 
 [miniconda](https://conda.io/miniconda.html) or
-[anaconda](https://www.anaconda.com/download/).
+[anaconda](https://www.anaconda.com/download/); an example to command to 
+achieve this might be
+```bash
+conda create -n oi qtpy qtawesome matplotlib numpy scipy scikit-image numexpr \
+    pydicom sympy six -c defaults -c conda-forge
+```
 
 Once the requirements are met, you can install with pip
 ```bash
