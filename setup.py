@@ -17,6 +17,6 @@ setup(name='blood_tools',
                         else ''),
       entry_points='''
         [gui_scripts]
-        blood_tools=blood_tools.cli.main:main
+        blood_tools=blood_tools.blood_relax_tool:main
       ''',
       zip_safe=False)
