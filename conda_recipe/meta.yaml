@@ -8,7 +8,7 @@ source:
 build:
   number: 0
   entry_points:
-    - blood_tools = blood_tools.cli.main:main
+    - blood_tools = blood_tools.blood_relax_tool:main
   script: python setup.py install --single-version-externally-managed --record=out.txt
   noarch: generic
 

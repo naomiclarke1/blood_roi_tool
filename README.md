@@ -25,7 +25,7 @@ The easiest way to install python is by downloading [anaconda] (https://www.anac
 
 Once anaconda is installed, run the following commands to obtain the necessary packages (listed above):
 ```bash
-conda install qtpy qtawesome matplotlib numpy scipy scikit-image
+conda install qtpy pyqt qtawesome matplotlib numpy scipy scikit-image
 conda install numexpr pydicom sympy six -c defaults -c conda-forge
 ```
 
