@@ -298,7 +298,9 @@ class MainWindow(QtWidgets.QWidget):
 
     def save_ROI(self, *e):
         to_save = {}
-        to_save['ROIs'] = self.image_ROIs
+        image_ROIs_json = self.create_image_ROIs_json()
+        #to_save['ROIs'] = self.image_ROIs
+        to_save['ROIs'] = image_ROIs_json
         to_save['included_slices'] = self.included_slices
         if self.directory:
             out = QtWidgets.QFileDialog.getSaveFileName(
@@ -307,9 +309,12 @@ class MainWindow(QtWidgets.QWidget):
             out = QtWidgets.QFileDialog.getSaveFileName(caption='ROI filename')
         if len(out) == 2:
             out = out[0]
-        self.roi_path = out
+        self.roi_path = out + '.json'
         f = open(self.roi_path, 'wb')
-        pickle.dump(to_save, f, 2)
+    
+        import json
+        json.dump(to_save,f)
+        #pickle.dump(to_save, f, 2)
         f.close()
 
     def roi_controls_enable(self, enable=True):
@@ -451,14 +456,31 @@ class MainWindow(QtWidgets.QWidget):
             self.load_roi()
             self.slice_label.setText("{}/{}".format(num, demon))
 
-    def save_analysis(self):
-        """save ROIs and the slice_included list to a .ROIs file"""
-        to_save = {}
-        to_save['ROIs'] = self.image_ROIs
-        to_save['included_slices'] = self.included_slices
-        with open(self.roi_path, 'wb') as f:
-            pickle.dump(to_save, f)
-            f.close()
+    def create_image_ROIs_json(self):
+        """create a version of the self.image_ROIs dictionary where the keys are json strings instead of ROI objects"""
+        image_ROIs_json={}
+        for img_fn in self.image_filename_list:
+                image_ROIs_json[img_fn]=ROI.write_json_str(self.image_ROIs[img_fn])
+        return image_ROIs_json        
+    
+    
+    def create_image_ROIs_from_json(self, ROIs_json):
+        """Retrieve original version of image_ROIs from dictionary with json strings"""
+        image_ROIs_from_json={}
+        for img_fn in self.image_filename_list:
+                image_ROIs_from_json[img_fn]=ROI.load_from_json(ROIs_json[img_fn])
+        return image_ROIs_from_json 
+
+#    def save_analysis(self):
+#        """save ROIs and the slice_included list to a .ROIs file"""
+#        to_save = {}
+#        image_ROIs_json = self.create_image_ROIs_json()
+#        #to_save['ROIs'] = self.image_ROIs
+#        to_save['ROIs'] = image_ROIs_json
+#        to_save['included_slices'] = self.included_slices
+#        with open(self.roi_path, 'wb') as f:
+#            pickle.dump(to_save, f)
+#            f.close()
 
     def load_prev_analysis(self):
         """Load the previous ROIs and slice inclusion list. I opted to prompt the user
@@ -479,10 +501,13 @@ class MainWindow(QtWidgets.QWidget):
                 caption='ROI filename')
         if len(infilename) == 2:
             infilename = infilename[0]
-        f = open(infilename, 'rb')
-        to_load = pickle.load(f)
+        f = open(infilename, 'r')
+        import json
+        #to_load = pickle.load(f)
+        to_load = json.load(f)
         f.close()
-        self.image_ROIs = to_load['ROIs']
+        #self.image_ROIs = to_load['ROIs']
+        self.image_ROIs = self.create_image_ROIs_from_json(to_load['ROIs'])
         self.included_slices = to_load['included_slices']
         self.load_roi()
 
