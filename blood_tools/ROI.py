@@ -201,8 +201,9 @@ class ROI(object):
         figure is cleared. Called as soon as the
         first patch is created - the user needs a new ROI
         object if they happen to change their mind."""
-        self.fig.canvas.mpl_disconnect(self.events[0])
-        self.fig.canvas.mpl_disconnect(self.events[1])
+        if self.fig is not None:
+            self.fig.canvas.mpl_disconnect(self.events[0])
+            self.fig.canvas.mpl_disconnect(self.events[1])
 
 
 class ROIcircle(ROI):
@@ -454,19 +455,18 @@ def draw_ROI(self, im=None, color='r'):
         mycirc.set_facecolor('none')
         ax.add_artist(mycirc)
 
-def write_json(self, json_filename):
-    """Save ROI as a JSON file"""
+def write_json_str(self):
+    """Store ROI info as a JSON string"""
     import json
     roi_dict = self.__getstate__()
-    with open(json_filename, 'w') as f:
-        json.dump(roi_dict, f)
+    json_str = json.dumps(roi_dict)
+    return json_str
   
 
-def load_from_json(json_filename):    
+def load_from_json(json_str):    
     """Load ROI from JSON file"""
     import json
-    with open(json_filename, 'r') as f:
-        roi_dict = json.load(f)
+    roi_dict = json.loads(json_str)
     
     #Now make an ROI with the properties specified in roi_dict
     if 'circle' in roi_dict:  #ROI is a circle or ellipse
