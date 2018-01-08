@@ -7,41 +7,37 @@ Installation
 ------------
 
 The following are required:
-    - python (version 2 or 3)
-    - qtpy
-    - pyqt, qt (version 4 or 5)
-    - qtawesome
-    - matplotlib
-    - numpy
-    - scipy
-    - scikit-image
-    - numexpr
-    - pydicom
-    - sympy
-    - six
+    1) python (version 2 or 3), and
+    2) the following packages:
+        - qtpy
+        - pyqt, qt (version 4 or 5)
+        - qtawesome
+        - matplotlib
+        - numpy
+        - scipy
+        - scikit-image
+        - numexpr
+        - pydicom
+        - sympy
+        - six
 
-The easiest way to install these is using conda, as part of 
-[miniconda](https://conda.io/miniconda.html) or
-[anaconda](https://www.anaconda.com/download/); an example to command to 
-achieve this might be
+The easiest way to install python is by downloading anaconda:
+(https://www.anaconda.com/download/)
+
+Once anaconda is installed, run the following command to obtain the necessary packages (listed above):
 ```bash
-conda create -n oi qtpy qtawesome matplotlib numpy scipy scikit-image numexpr \
+conda install qtpy qtawesome matplotlib numpy scipy scikit-image numexpr \
     pydicom sympy six -c defaults -c conda-forge
 ```
 
-Once the requirements are met, you can install with pip
-```bash
-pip install git+https://github.com/shportnoy/blood_roi_tool
-```
-
-or by cloning the repository, which will also download some example data
+Once all the requirements are met, you can install the tool (and download some example data) by cloning this repository:
 ```bash
 git clone https://github.com/shportnoy/blood_roi_tool
 cd blood_roi_tool
 python setup.py install
 ```
 
-Thereafter, you can launch the tool with
+Thereafter, you can launch the tool with the command:
 ```bash
 blood_tools
 ```
