@@ -21,13 +21,12 @@ The following are required:
 * sympy
 * six
 
-The easiest way to install python is by downloading [anaconda]:
-(https://www.anaconda.com/download/)
+The easiest way to install python is by downloading [anaconda] (https://www.anaconda.com/download/).
 
-Once anaconda is installed, run the following command to obtain the necessary packages (listed above):
+Once anaconda is installed, run the following commands to obtain the necessary packages (listed above):
 ```bash
-conda install qtpy qtawesome matplotlib numpy scipy scikit-image numexpr \
-    pydicom sympy six -c defaults -c conda-forge
+conda install qtpy qtawesome matplotlib numpy scipy scikit-image
+conda install numexpr pydicom sympy six -c defaults -c conda-forge
 ```
 
 Once all the requirements are met, you can install the tool (and download some example data) by cloning this repository:
