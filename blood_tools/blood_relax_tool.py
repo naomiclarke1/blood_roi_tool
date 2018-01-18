@@ -70,6 +70,8 @@ class ROISelectPlot(QtWidgets.QWidget):
             extent=[0, self.im.shape[1], 0, self.im.shape[0]])
         ax.set_xlim(0, self.im.shape[1])
         ax.set_ylim(0, self.im.shape[0])
+        self.toolbar.update()
+        self.toolbar.push_current()
         self.figure.canvas.draw()
 
 
