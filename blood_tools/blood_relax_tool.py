@@ -8,14 +8,13 @@ from __future__ import absolute_import, print_function, division
 
 # std lib imports
 import os
-import traceback
-import types
 from functools import wraps
-import pickle
+import json
 import math
+
 # anaconda module imports
 import qtpy
-from qtpy import QtGui, QtCore, QtWidgets
+from qtpy import QtCore, QtWidgets
 import qtawesome
 if qtpy.API == 'pyqt5':
     from matplotlib.backends.backend_qt5agg import \
@@ -31,6 +30,16 @@ from . import blood_tools
 from . import fitting
 
 
+def callback(f):
+    @wraps(f)
+    def wrapper(*args, **kwds):
+        try:
+            return f(*args, **kwds)
+        except Exception as e:
+            print(e)
+    return wrapper
+
+
 class ROISelectPlot(QtWidgets.QWidget):
     """
     The plot canvas for the image, in the left and center panes of the GUI. 
@@ -41,7 +50,7 @@ class ROISelectPlot(QtWidgets.QWidget):
         super(ROISelectPlot, self).__init__(parent)
         # initialize the plot area
         self.figure = Figure()
-        self.axes = self.figure.add_subplot(111, autoscale_on=False)
+        self.axes = self.figure.add_subplot(111)
         self.canvas = FigureCanvas(self.figure)
         self.toolbar = NavigationToolbar2QT(self.canvas, self)
         # set the layout
@@ -50,42 +59,19 @@ class ROISelectPlot(QtWidgets.QWidget):
         layout.addWidget(self.toolbar)
         self.setLayout(layout)
         self.im = None
+        self.mpl_im = None
 
     def make_image(self, im, colormap, vmin=5, vmax=95):
-        # only turn autoscale on when first setting the image so that ROI
-        # changes won't tweak the autoscale
         self.im = im
-        self.axes.set_autoscale_on(True)
-        self.mpl_im = self.axes.imshow(im, vmin=np.percentile(
-            im, vmin), vmax=np.percentile(im, vmax), cmap=colormap, origin='upper')
-        self.axes.set_autoscale_on(False)
-        self.figure.canvas.draw()
-
-    def get_axes(self):
-        return self.axes
-
-    def get_mpl_im(self):
-        return self.mpl_im
-
-    def get_figure(self):
-        return self.figure
-
-# Inherited from ROISelectPlot, modifying only the make_image method
-
-
-class ColourROISelectPlot(ROISelectPlot):
-    """
-    Identical to ROI select plot, except colourized
-    """
-
-    def make_image(self, im, colormap, vmin=5, vmax=95):
-        # only turn autoscale on when setting the image so that ROI changes
-        # won't tweak the autoscale
-        self.im = im
-        self.axes.set_autoscale_on(True)
-        self.mpl_im = self.axes.imshow(im, vmin=np.percentile(
-            im, vmin), vmax=np.percentile(im, vmax), cmap='jet', origin='upper')
-        self.axes.set_autoscale_on(False)
+        ax = self.axes
+        self.mpl_im = ax.imshow(
+            im, vmin=np.percentile(im, vmin), vmax=np.percentile(im, vmax),
+            cmap=colormap, origin='upper',
+            extent=[0, self.im.shape[1], 0, self.im.shape[0]])
+        ax.set_xlim(0, self.im.shape[1])
+        ax.set_ylim(0, self.im.shape[0])
+        self.toolbar.update()
+        self.toolbar.push_current()
         self.figure.canvas.draw()
 
 
@@ -190,8 +176,6 @@ class MainWindow(QtWidgets.QWidget):
        # self.uncertainty_checkbox = QtWidgets.QCheckBox('Fit with uncertainty', self)
 
         self.plot_im = ROISelectPlot(self)
-        # self.color_plot_im = ColourROISelectPlot(self)  #remove middle plot.
-        # Add functionality that allows user to select colormap on main plot.
         self.plot_graph = T2CurvePlot(self)
 
         layout_top = QtWidgets.QHBoxLayout()
@@ -229,7 +213,6 @@ class MainWindow(QtWidgets.QWidget):
 
         layout_mid = QtWidgets.QHBoxLayout()
         layout_mid.addWidget(self.plot_im)
-        # layout_mid.addWidget(self.color_plot_im)
         layout_mid.addWidget(self.plot_graph)
 
         self.vmin_window_slider = QtWidgets.QSlider(
@@ -277,13 +260,15 @@ class MainWindow(QtWidgets.QWidget):
         self.vmax_window_slider.valueChanged.connect(self.set_image_window)
         self.combo_colormap.currentIndexChanged.connect(self.colormap_changed)
 
+    @callback
     def colormap_changed(self, *e):
-        colormap = self.get_colormap()
+        colormap = self.combo_colormap.currentText()
         self.plot_im.make_image(
             self.images[self.image_index], colormap, self.vmin, self.vmax)
 
+    @callback
     def exclude_current_slice(self, *e):
-        """feature requested by Brahmdeep allows them to exclude a motion corrupted slice"""
+        """allows to exclude a motion corrupted slice"""
         if self.included_slices[self.image_index]:
             self.included_slices[self.image_index] = False
             self.clear_roi()
@@ -293,13 +278,11 @@ class MainWindow(QtWidgets.QWidget):
             self.roi_controls_enable(True)
             self.load_roi()
 
-        # save the list of included slices
-        # self.save_analysis()
-
+    @callback
     def save_ROI(self, *e):
         to_save = {}
         image_ROIs_json = self.create_image_ROIs_json()
-        #to_save['ROIs'] = self.image_ROIs
+        # to_save['ROIs'] = self.image_ROIs
         to_save['ROIs'] = image_ROIs_json
         to_save['included_slices'] = self.included_slices
         if self.directory:
@@ -314,12 +297,8 @@ class MainWindow(QtWidgets.QWidget):
         if not out.endswith('.json'):
             out = out + '.json'
         self.roi_path = out
-        f = open(self.roi_path, 'w')
-    
-        import json
-        json.dump(to_save,f)
-        #pickle.dump(to_save, f, 2)
-        f.close()
+        with open(self.roi_path, 'w') as f:
+            json.dump(to_save, f)
 
     def roi_controls_enable(self, enable=True):
         """disable the ROI controls when the slice is excluded, to provide
@@ -351,6 +330,7 @@ class MainWindow(QtWidgets.QWidget):
         self.button_save_ROI.setEnabled(enable)
         self.button_load_ROI.setEnabled(enable)
 
+    @callback
     def set_image_window(self, *e):
         self.vmin = self.vmin_window_slider.value()  # image window minimum
         self.vmax = self.vmax_window_slider.value()  # image window maximum
@@ -360,10 +340,8 @@ class MainWindow(QtWidgets.QWidget):
             im_vmax = np.percentile(self.plot_im.im, self.vmax)
 
             self.plot_im.mpl_im.set_clim(im_vmin, im_vmax)
-            #self.color_plot_im.mpl_im.set_clim(im_vmin, im_vmax)
 
             self.plot_im.figure.canvas.draw()
-            # self.color_plot_im.figure.canvas.draw()
         else:  # matplotlib will throw an error if the window is negative
             pass
 
@@ -378,21 +356,12 @@ class MainWindow(QtWidgets.QWidget):
             self.color_roi_patch.remove()
             self.color_roi_patch = None
 
-        # if self.color_activeROI is not None:
-        #    self.color_activeROI.remove()
-        #    axes = self.color_plot_im.get_axes()
-        #   axes = []
-        #   self.color_activeROI = None
         if self.grey_activeROI is not None:  # check if there is an ROI
             self.grey_activeROI.remove()
-            axes = self.plot_im.get_axes()
-            axes = []
             self.grey_activeROI = None
 
-        grey_figure = self.plot_im.get_figure()
+        grey_figure = self.plot_im.figure
         grey_figure.canvas.draw()
-        #color_figure = self.color_plot_im.get_figure()
-        # color_figure.canvas.draw()
 
     def change_image(self):
         # serialize existing ROIs to file, this is quick+dirty b/c I haven't
@@ -437,12 +406,12 @@ class MainWindow(QtWidgets.QWidget):
             self.image_filename = self.image_filename_list[self.image_index]
             # display the slice selection label, with zero padding to keep the
             # toolbar from shifting around
-            num, demon = str(self.image_index + 1).rjust(2,
-                                                         '0'), str(num_images).rjust(2, '0')
+            num, demon = str(self.image_index + 1).rjust(
+                2, '0'), str(num_images).rjust(2, '0')
             # display previous ROI if it exists
             self.clear_roi()
             self.plot_im.mpl_im.set_data(self.images[self.image_index])
-            axes = self.plot_im.get_axes()
+            axes = self.plot_im.axes
             if self.t2:
                 title_str = 'TE=%.0f ms' % self.prep_times[self.image_index]
             else:
@@ -450,52 +419,32 @@ class MainWindow(QtWidgets.QWidget):
                                    for att in self.image_attributes]
                 title_str = 'TI=%.0f ms' % inversion_times[self.image_index]
             axes.set_title(title_str)
-            # self.color_plot_im.mpl_im.set_data(self.images[self.image_index])
-            #axes = self.color_plot_im.get_axes()
-            # axes.set_title(title_str)
-            # self.set_image_window()
 
             self.plot_im.figure.canvas.draw()
-            # self.color_plot_im.figure.canvas.draw()
             self.load_roi()
             self.slice_label.setText("{}/{}".format(num, demon))
 
     def create_image_ROIs_json(self):
         """create a version of the self.image_ROIs dictionary where the keys are json strings instead of ROI objects"""
-        image_ROIs_json={}
+        image_ROIs_json = {}
         for img_fn in self.image_filename_list:
                 image_ROIs_json[img_fn]=ROI.write_json_str(self.image_ROIs[img_fn])
-        return image_ROIs_json        
-    
+        return image_ROIs_json
     
     def create_image_ROIs_from_json(self, ROIs_json):
         """Retrieve original version of image_ROIs from dictionary with json strings"""
-        image_ROIs_from_json={}
+        image_ROIs_from_json = {}
         for img_fn in self.image_filename_list:
-                image_ROIs_from_json[img_fn]=ROI.load_from_json(ROIs_json[img_fn])
+                image_ROIs_from_json[img_fn] = ROI.load_from_json(
+                    ROIs_json[img_fn])
         return image_ROIs_from_json 
 
-#    def save_analysis(self):
-#        """save ROIs and the slice_included list to a .ROIs file"""
-#        to_save = {}
-#        image_ROIs_json = self.create_image_ROIs_json()
-#        #to_save['ROIs'] = self.image_ROIs
-#        to_save['ROIs'] = image_ROIs_json
-#        to_save['included_slices'] = self.included_slices
-#        with open(self.roi_path, 'wb') as f:
-#            pickle.dump(to_save, f)
-#            f.close()
-
+    @callback
     def load_prev_analysis(self):
         """Load the previous ROIs and slice inclusion list. I opted to prompt the user
         so that they understand where the ROIs come from as opposed to having them
         magically appear
         """
-#        quit_msg = "Would you like to reload your previous ROIs for this series?"
-#        reply = QtWidgets.QMessageBox.question(self, 'Message',
-#                         quit_msg, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
-#
-#        if reply == QtWidgets.QMessageBox.Yes:
         self.clear_roi()
         if self.directory:
             infilename = QtWidgets.QFileDialog.getOpenFileName(
@@ -507,12 +456,8 @@ class MainWindow(QtWidgets.QWidget):
             infilename = infilename[0]
         if not infilename:
             return
-        f = open(infilename, 'r')
-        import json
-        #to_load = pickle.load(f)
-        to_load = json.load(f)
-        f.close()
-        #self.image_ROIs = to_load['ROIs']
+        with open(infilename, 'r') as f:
+            to_load = json.load(f)
         self.image_ROIs = self.create_image_ROIs_from_json(to_load['ROIs'])
         self.included_slices = to_load['included_slices']
         self.load_roi()
@@ -538,7 +483,7 @@ class MainWindow(QtWidgets.QWidget):
     def grey_roi_complete_callback(self):
         """method called when user finishes drawing an ROI on the greyscale plot
         mirrors the ROI over the colour plot and saves the ROI"""
-        roi_scope = self.get_roi_scope()
+        roi_scope = self.combo_roi_scope.currentText()
 
         if roi_scope == "All Slices":
             for img_fn in self.image_filename_list:
@@ -546,41 +491,10 @@ class MainWindow(QtWidgets.QWidget):
         else:
             self.image_ROIs[self.image_filename] = self.grey_activeROI
 
-        # self.save_analysis()
-
         self.clear_roi()
         self.load_roi()
 
-    def color_roi_complete_callback(self):
-        """method called when user finishes drawing an ROI on the color plot
-        mirrors the ROI over the greyscale plot and saves the ROI"""
-        roi_scope = self.get_roi_scope()
-
-        if roi_scope == "All Slices":
-            for img_fn in self.image_filename_list:
-                self.image_ROIs[img_fn] = self.color_activeROI
-        else:
-            self.image_ROIs[self.image_filename] = self.color_activeROI
-        # save ROI files
-        # self.save_analysis()
-
-        self.clear_roi()
-        self.load_roi()
-
-    def get_roi_scope(self):
-        return self.combo_roi_scope.currentText()
-
-    def get_roi_style(self):
-        current_text = self.combo_roi_style.currentText()
-        return current_text
-
-    def get_colormap(self):
-        current_colormap = self.combo_colormap.currentText()
-        return current_colormap
-
-    def get_relax_type(self):
-        return self.combo_relax.currentText()
-
+    @callback
     def choose_dir(self, *event):
         """opens a directory choose dialog box, allows the user to select their
         dicom series of interest and loads that series."""
@@ -628,7 +542,8 @@ class MainWindow(QtWidgets.QWidget):
             if not self.images:
                 error = QtWidgets.QErrorMessage()
                 error.showMessage(
-                    'The selected directory does not contain a DICOM series which this widget is capable of loading')
+                    'The selected directory does not contain a DICOM series '
+                    'which this widget is capable of loading')
                 error.exec_()
                 return
 
@@ -640,15 +555,14 @@ class MainWindow(QtWidgets.QWidget):
             # initiate included slices to be all True
             self.included_slices = [True for _ in range(len(self.images))]
 
-
             for attributes in self.image_attributes:
                 self.image_filename_list.append(attributes['filename'])
 
             self.image_filename = self.image_filename_list[self.image_index]
-            colormap = self.get_colormap()
+            colormap = self.combo_colormap.currentText()
             self.plot_im.make_image(
                 self.images[self.image_index], colormap, self.vmin, self.vmax)
-            axes = self.plot_im.get_axes()
+            axes = self.plot_im.axes
             if self.t2:
                 title_str = 'TE=%.0f ms' % self.prep_times[self.image_index]
             else:
@@ -657,15 +571,9 @@ class MainWindow(QtWidgets.QWidget):
                 title_str = 'TI=%.0f ms' % inversion_times[self.image_index]
             axes.set_title(title_str)
             self.controls_enabled(True)
-            # self.color_plot_im.make_image(
-            #    self.images[self.image_index], self.vmin, self.vmax)
-            #axes = self.color_plot_im.get_axes()
-            # axes.set_title(title_str)
             num, demon = '01', str(len(self.images)).rjust(2, '0')
             self.slice_label.setText("{}/{}".format(num, demon))
 
-#            self.load_prev_analysis()
-#            self.load_roi()
         else:  # user hit the cancel or x button to leave the dialog
             pass
 
@@ -683,10 +591,9 @@ class MainWindow(QtWidgets.QWidget):
             self.color_activeROI = self.image_ROIs[self.image_filename]
             self.grey_roi_patch = self.grey_activeROI.draw(
                 self.plot_im.axes, self.plot_im.figure, 'red')
-            # self.color_roi_patch = self.color_activeROI.draw(
-            #    self.color_plot_im.axes, self.color_plot_im.figure, 'black')
             self.calc_ROI_area()
 
+    @callback
     def start_roi(self):
         """create a new ROI for the image"""
         if not len(self.images) > 0:
@@ -696,19 +603,19 @@ class MainWindow(QtWidgets.QWidget):
             error.exec_()
             return
 
-        roi_style = self.get_roi_style().lower()  # style names are lowercase in ROI.py
+        roi_style = self.combo_roi_style.currentText().lower()
+        # style names are lowercase in ROI.py
 
         self.clear_roi()
         # create an ROI object for both images, keep the one that calls the
         # complete callback first
-        self.grey_activeROI = ROI.new_ROI(self.plot_im.get_mpl_im(),
-                                          self.plot_im.get_axes(), self.plot_im.get_figure(),
-                                          roi_style, 'red', self.grey_roi_complete_callback)
+        self.grey_activeROI = ROI.new_ROI(self.plot_im.mpl_im,
+                                          self.plot_im.axes,
+                                          self.plot_im.figure,
+                                          roi_style, 'red',
+                                          self.grey_roi_complete_callback)
 
-        # self.color_activeROI = ROI.new_ROI(self.color_plot_im.get_mpl_im(),
-        #                                   self.color_plot_im.get_axes(), self.color_plot_im.get_figure(),
-        # roi_style, 'black', self.color_roi_complete_callback)
-
+    @callback
     def process_data(self, *event):
         """Gets the prep times and populates the T1/T2 plot"""
         # check that user has drawn all of the required ROIs
@@ -732,7 +639,7 @@ class MainWindow(QtWidgets.QWidget):
             return
 
         # todo add error message if images or ROI not loaded
-        relaxation_type = self.get_relax_type()
+        relaxation_type = self.combo_relax.currentText()
         axes = self.plot_graph.axes
         axes.clear()
 
