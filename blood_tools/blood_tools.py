@@ -11,7 +11,7 @@ import pickle
 import os
 from . import fitting
 import pylab as plt
-import dicom
+import pydicom as dicom
 import sys
 import matplotlib
 import itertools
