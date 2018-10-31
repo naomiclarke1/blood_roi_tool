@@ -67,9 +67,9 @@ class ROISelectPlot(QtWidgets.QWidget):
         self.mpl_im = ax.imshow(
             im, vmin=np.percentile(im, vmin), vmax=np.percentile(im, vmax),
             cmap=colormap, origin='upper',
-            extent=[0, self.im.shape[1], 0, self.im.shape[0]])
+            extent=[0, self.im.shape[1], self.im.shape[0], 0])
         ax.set_xlim(0, self.im.shape[1])
-        ax.set_ylim(0, self.im.shape[0])
+        ax.set_ylim(self.im.shape[0],0)
         self.toolbar.update()
         self.toolbar.push_current()
         self.figure.canvas.draw()
@@ -334,16 +334,9 @@ class MainWindow(QtWidgets.QWidget):
     def set_image_window(self, *e):
         self.vmin = self.vmin_window_slider.value()  # image window minimum
         self.vmax = self.vmax_window_slider.value()  # image window maximum
-
-        if self.vmin <= self.vmax and self.plot_im.im is not None:
-            im_vmin = np.percentile(self.plot_im.im, self.vmin)
-            im_vmax = np.percentile(self.plot_im.im, self.vmax)
-
-            self.plot_im.mpl_im.set_clim(im_vmin, im_vmax)
-
-            self.plot_im.figure.canvas.draw()
-        else:  # matplotlib will throw an error if the window is negative
-            pass
+        
+        self.plot_im.make_image(
+            self.images[self.image_index], self.combo_colormap.currentText(), self.vmin, self.vmax)
 
     def clear_roi(self):
         # remove the ROI from the screen, but do not delete it until it is
