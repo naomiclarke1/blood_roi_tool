@@ -836,7 +836,7 @@ def bootstrap_fit(image_list, roi,  model, x, iterations=1000):
 
 def protocol_file_dump(foldername, filename):
     file_list = os.listdir(foldername)
-    dicom_filename = foldername + '/' + file_list[0]
+    dicom_filename = foldername + '/' + file_list[1]
     hdr = dicom.read_file(dicom_filename)
     out = repr(hdr[(0x0029, 0x1020)].value)
     out = out.replace('\\t', '\t')
