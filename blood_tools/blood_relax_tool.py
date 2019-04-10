@@ -169,6 +169,12 @@ class MainWindow(QtWidgets.QWidget):
         self.combo_relax = QtWidgets.QComboBox()
         self.combo_relax.addItems(['T1', 'T2'])
         self.combo_relax.setCurrentIndex(0)
+        
+        self.combo_type_label = QtWidgets.QLabel('Fit parameters')
+        self.combo_type = QtWidgets.QComboBox()
+        self.combo_type.addItems(['2', '3'])
+        self.combo_type.setCurrentIndex(0)
+        
 
         self.roi_area_label = QtWidgets.QLabel(
             'ROI Area: 0.00 (pixels) / 0.00 (mm^2)')
@@ -206,6 +212,8 @@ class MainWindow(QtWidgets.QWidget):
 
         layout_sub_subTop = QtWidgets.QHBoxLayout()
         layout_sub_subTop.addStretch()
+        layout_sub_subTop.addWidget(self.combo_type_label)
+        layout_sub_subTop.addWidget(self.combo_type)
         layout_sub_subTop.addWidget(self.combo_relax_label)
         layout_sub_subTop.addWidget(self.combo_relax)
         # layout_top.addWidget(self.uncertainty_checkbox)
@@ -310,6 +318,7 @@ class MainWindow(QtWidgets.QWidget):
 
         self.combo_roi_style.setEnabled(enable)
         self.combo_relax.setEnabled(enable)
+        self.combo_type.setEnabled(enable)
         self.combo_roi_scope.setEnabled(enable)
         self.button_draw_roi.setEnabled(enable)
 
@@ -326,6 +335,7 @@ class MainWindow(QtWidgets.QWidget):
         self.combo_roi_style.setEnabled(enable)
         self.combo_colormap.setEnabled(enable)
         self.combo_relax.setEnabled(enable)
+        self.combo_type.setEnabled(enable)
         self.combo_roi_scope.setEnabled(enable)
         self.button_save_ROI.setEnabled(enable)
         self.button_load_ROI.setEnabled(enable)
@@ -531,6 +541,10 @@ class MainWindow(QtWidgets.QWidget):
                 self.prep_times = VB17_prep_times
             if VD13_prep_times:
                 self.prep_times = VD13_prep_times
+                
+            #for some reason, zero prep time image gets no prep time, assign it TE=2000    
+            if len(self.prep_times) < len(self.dicom_list):
+                 self.prep_times=np.concatenate([np.array([2000]),self.prep_times])       
 
             if not self.images:
                 error = QtWidgets.QErrorMessage()
@@ -635,6 +649,9 @@ class MainWindow(QtWidgets.QWidget):
         relaxation_type = self.combo_relax.currentText()
         axes = self.plot_graph.axes
         axes.clear()
+        
+        fit_type=self.combo_type.currentText()
+        print(fit_type)
 
         if relaxation_type == 'T1':
             ti, signal, stddev = get_T1_decay_signal(
@@ -709,8 +726,15 @@ class MainWindow(QtWidgets.QWidget):
 
             start, stop = 0.5 * np.min(te), 1.25 * np.max(te)
             fit_x_points = np.linspace(start, stop, 1000)
-            spin_echo = fitting.model(
-                'M0*exp(-x/T2)', {'M0': np.max(signal), 'T2': 150})
+            
+            if fit_type == '2':
+                spin_echo = fitting.model(
+                    'M0*exp(-x/T2)', {'M0': np.max(signal), 'T2': 150})
+                
+            elif fit_type=='3':
+                 spin_echo = fitting.model(
+                    'M0*exp(-x/T2) + B', {'M0': np.max(signal), 'T2': 150, 'B':signal[0]})  
+
             spin_echo.fit(te, signal, stddev)
             axes.plot(fit_x_points, spin_echo(fit_x_points), 'b')
 
@@ -746,6 +770,10 @@ def get_T2_decay_signal(dicom_list, image_list, roi_list, included_slices, log_s
         prep_times = VB17_prep_times
     if VD13_prep_times:
         prep_times = VD13_prep_times
+        
+     #for some reason, zero prep time image gets no prep time, assign it TE=2000    
+    if len(prep_times) < len(dicom_list):
+        prep_times=np.concatenate([np.array([2000]),prep_times])          
 
     signal = []
     log_signal = []
