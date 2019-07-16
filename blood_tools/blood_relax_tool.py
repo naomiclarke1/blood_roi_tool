@@ -651,8 +651,6 @@ class MainWindow(QtWidgets.QWidget):
         axes.clear()
         
         fit_type=self.combo_type.currentText()
-        print(fit_type)
-        print(relaxation_type)
 
         if relaxation_type == 'T1':
             self.t2=0
