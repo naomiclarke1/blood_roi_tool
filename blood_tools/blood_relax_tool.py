@@ -652,10 +652,13 @@ class MainWindow(QtWidgets.QWidget):
         
         fit_type=self.combo_type.currentText()
         print(fit_type)
+        print(relaxation_type)
 
         if relaxation_type == 'T1':
+            self.t2=0
             ti, signal, stddev = get_T1_decay_signal(
                 self.image_attributes, self.images, roi_list, self.included_slices)
+            
             if not len(ti) or ti[0] == 0:
                 error = QtWidgets.QErrorMessage()
                 error.showMessage(
@@ -667,16 +670,23 @@ class MainWindow(QtWidgets.QWidget):
             axes.set_xlabel('inversion time (ms)')
             axes.set_ylabel('signal intensity')
 
+
+#            inversion_recovery = fitting.model(
+#                'abs(M0*(1-2*aa*exp(-x/T1)))', {'M0': signal.max(), 'aa': 1, 'T1': 1000})
+            
             inversion_recovery = fitting.model(
-                'abs(M0*(1-2*aa*exp(-x/T1)))', {'M0': signal.max(), 'aa': 1, 'T1': 1000})
+                    'abs(A-B*exp(-x/T1))',{'A':signal.max(),'B':0.5*signal.max(),'T1':1000})
 
             # Initial T1 guess based on null time
             ti = np.array(ti)  # necessary for the next line to work
-            T1_guess = -ti[np.where(signal == signal.min())] / np.log(0.5)
-            if(np.size(T1_guess) > 1):
-                inversion_recovery['T1'] = T1_guess[0]
-            else:
-                inversion_recovery['T1'] = T1_guess
+            if 20000 not in ti:
+                T1_guess = -ti[np.where(signal == signal.min())] / np.log(0.5)
+                if(np.size(T1_guess) > 1):
+                    inversion_recovery['T1'] = T1_guess[0]
+                else:
+                    inversion_recovery['T1'] = T1_guess
+                    
+                inversion_recovery['B']=2*signal.max()        
 
             bootstrap_signals = bootstrap_decay_signal(
                 self.image_attributes, self.images, roi_list, self.included_slices, iterations=100)
@@ -686,12 +696,19 @@ class MainWindow(QtWidgets.QWidget):
 
             fix_x_points = np.arange(0, 1.3 * np.max(ti), 1)
             axes.plot(fix_x_points, inversion_recovery(fix_x_points), 'b')
-            T1_corr = inversion_recovery['T1'].value * \
-                (2 * inversion_recovery['aa'].value - 1)
+#            T1_corr = inversion_recovery['T1'].value * \
+#                (2 * inversion_recovery['aa'].value - 1)
+            
+            T1_corr = inversion_recovery['T1'].value*(inversion_recovery['B'].value/inversion_recovery['A'].value-1)
+
             # Use error propagation to obtain uncertainty in LL corrected T1
-            temp = np.sqrt((par_uncertainties['aa'] / inversion_recovery['aa'].value)**2 + (
-                par_uncertainties['T1'] / inversion_recovery['T1'].value)**2)
-            T1_corr_unc = np.sqrt(temp**2 + par_uncertainties['T1']**2)
+#            temp = np.sqrt((par_uncertainties['aa'] / inversion_recovery['aa'].value)**2 + (
+#                par_uncertainties['T1'] / inversion_recovery['T1'].value)**2)
+#            T1_corr_unc = np.sqrt(temp**2 + par_uncertainties['T1']**2)
+            
+            T1_corr_unc = T1_corr*np.sqrt((par_uncertainties['A']/inversion_recovery['A'].value)**2 +
+                           (par_uncertainties['B']/inversion_recovery['B'].value)**2 + 
+                           (par_uncertainties['T1']/inversion_recovery['T1'].value)**2);                      
 
             resids = (inversion_recovery(ti) - np.array(signal)
                       )**2 / np.array(signal)**2
@@ -699,8 +716,13 @@ class MainWindow(QtWidgets.QWidget):
 
             str1 = r'$\rm{T_1=%.0f \pm %.0f\ ms}$' % (
                 inversion_recovery['T1'].value, par_uncertainties['T1'])
-            str2 = r'$\rm{T_1\ (LL\ corr)=%.0f \pm %.0f\ ms}$' % (
-                T1_corr, T1_corr_unc)
+
+            if 20000 in ti:
+                str2=''
+            else:
+                str2 = r'$\rm{T_1\ (LL\ corr)=%.0f \pm %.0f\ ms}$' % (
+                    T1_corr, T1_corr_unc)
+            
             str3 = r'$\rm{RMSD=%.1f \%%}$' % (RMSD)
 
             #axes.text(0.5, 0.5, "T1 value, LL corrected : {}ms".format(round(T1_corr),0), transform=axes.transAxes)
@@ -735,7 +757,8 @@ class MainWindow(QtWidgets.QWidget):
                  spin_echo = fitting.model(
                     'M0*exp(-x/T2) + B', {'M0': np.max(signal), 'T2': 150, 'B':signal[0]})  
 
-            spin_echo.fit(te, signal, stddev)
+            #spin_echo.fit(te, signal, stddev)
+            spin_echo.fit(te, signal, np.ones_like(signal))
             axes.plot(fit_x_points, spin_echo(fit_x_points), 'b')
 
             resids = (spin_echo(np.array(te)) -
