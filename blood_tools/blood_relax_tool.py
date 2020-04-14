@@ -679,11 +679,7 @@ class MainWindow(QtWidgets.QWidget):
             ti = np.array(ti)  # necessary for the next line to work
             if 20000 not in ti:
                 T1_guess = -ti[np.where(signal == signal.min())] / np.log(0.5)
-                if(np.size(T1_guess) > 1):
-                    inversion_recovery['T1'] = T1_guess[0]
-                else:
-                    inversion_recovery['T1'] = T1_guess
-                    
+                inversion_recovery['T1'] = T1_guess[0]        
                 inversion_recovery['B']=2*signal.max()        
 
             bootstrap_signals = bootstrap_decay_signal(
