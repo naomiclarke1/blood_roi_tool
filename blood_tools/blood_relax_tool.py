@@ -36,6 +36,7 @@ def callback(f):
         try:
             return f(*args, **kwds)
         except Exception as e:
+            print("Caught exception:")
             print(e)
     return wrapper
 
@@ -528,23 +529,26 @@ class MainWindow(QtWidgets.QWidget):
             self.images, self.image_attributes, self.dicom_list = blood_tools.read_dicoms(
                 out, ['InversionTime', 'PixelSpacing'])
 
-            VB17_prep_times = blood_tools.get_T2_prep_times_VB17(
-                self.dicom_list)
-            VE11_prep_times = blood_tools.get_T2_prep_times_VE11(
-                self.dicom_list)
-            VD13_prep_times = blood_tools.get_T2_prep_times_VD13A(
-                self.dicom_list)
+            # CHANGE_PT
+            # VB17_prep_times = blood_tools.get_T2_prep_times_VB17(
+            #     self.dicom_list)
+            # VE11_prep_times = blood_tools.get_T2_prep_times_VE11(
+            #     self.dicom_list)
+            # VD13_prep_times = blood_tools.get_T2_prep_times_VD13A(
+            #     self.dicom_list)
 
-            if VE11_prep_times:
-                self.prep_times = VE11_prep_times
-            if VB17_prep_times:
-                self.prep_times = VB17_prep_times
-            if VD13_prep_times:
-                self.prep_times = VD13_prep_times
+            # if VE11_prep_times:
+            #     self.prep_times = VE11_prep_times
+            # if VB17_prep_times:
+            #     self.prep_times = VB17_prep_times
+            # if VD13_prep_times:
+            #     self.prep_times = VD13_prep_times
+
+            self.prep_times = [192,128,32,160,64]
                 
             #for some reason, zero prep time image gets no prep time, assign it TE=2000    
-            if len(self.prep_times) < len(self.dicom_list):
-                 self.prep_times=np.concatenate([np.array([2000]),self.prep_times])       
+            # if len(self.prep_times) < len(self.dicom_list):
+            #      self.prep_times=np.concatenate([np.array([2000]),self.prep_times])     
 
             if not self.images:
                 error = QtWidgets.QErrorMessage()
@@ -775,18 +779,21 @@ class MainWindow(QtWidgets.QWidget):
 
 def get_T2_decay_signal(dicom_list, image_list, roi_list, included_slices, log_scale=False):
     """Gets T2 preps and signal"""
+    # CHANGE_PT
     # get T2 prep times
     # VE11 is the new Siemens software, VE17 is the old version
-    VB17_prep_times = blood_tools.get_T2_prep_times_VB17(dicom_list)
-    VE11_prep_times = blood_tools.get_T2_prep_times_VE11(dicom_list)
-    VD13_prep_times = blood_tools.get_T2_prep_times_VD13A(dicom_list)
+    # VB17_prep_times = blood_tools.get_T2_prep_times_VB17(dicom_list)
+    # VE11_prep_times = blood_tools.get_T2_prep_times_VE11(dicom_list)
+    # VD13_prep_times = blood_tools.get_T2_prep_times_VD13A(dicom_list)
 
-    if VE11_prep_times:
-        prep_times = VE11_prep_times
-    if VB17_prep_times:
-        prep_times = VB17_prep_times
-    if VD13_prep_times:
-        prep_times = VD13_prep_times
+    # if VE11_prep_times:
+    #     prep_times = VE11_prep_times
+    # if VB17_prep_times:
+    #     prep_times = VB17_prep_times
+    # if VD13_prep_times:
+    #     prep_times = VD13_prep_times
+
+    prep_times = [192,128,32,160,64]
         
      #for some reason, zero prep time image gets no prep time, assign it TE=2000    
     if len(prep_times) < len(dicom_list):
